@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    // Constants
+    // Constants (unchanged)
     const CODES = {
         FIRST: '442100,342100,511500,511100',
         SECOND: '442100,342100,511500,511100'
@@ -18,7 +18,7 @@
     const CONFIG = {
         SLEEP_DEFAULT_MS: 20,
         SLEEP_LONG_MS: 100,
-        SLEEP_VERY_LONG_MS: 500,
+        SLEEP_VERY_LONG_MS: 200,
         MAX_RETRIES: 10
     };
 
@@ -70,6 +70,18 @@
         await sleep(delay);
     }
 
+    async function simulateTabPress(target = document.activeElement, delay = CONFIG.SLEEP_DEFAULT_MS) {
+        if (!target) {
+            console.error('No target element for Tab press');
+            return;
+        }
+        const info = KEY_INFO['Tab'];
+        console.debug(`Simulating fast Tab on`, target);
+        // Single event for Tab to optimize speed, as focus shift typically needs only keydown
+        dispatchKey(target, 'keydown', info.key, info.code, info.keyCode, { bubbles: true, cancelable: true });
+        await sleep(delay);
+    }
+
     async function pasteText(text, target = document.activeElement) {
         if (!target) {
             console.error('No target element for paste');
@@ -97,12 +109,15 @@
         }
     }
 
-    async function pressEnter(times = 1) {
-        await pressKey('Enter', times);
+    async function pressTab(times = 1) {
+        for (let i = 0; i < times; i++) {
+            await simulateTabPress();
+            await sleep(CONFIG.SLEEP_DEFAULT_MS); // Reduced from SLEEP_LONG_MS for Tab only
+        }
     }
 
-    async function pressTab(times = 1) {
-        await pressKey('Tab', times);
+    async function pressEnter(times = 1) {
+        await pressKey('Enter', times);
     }
 
     async function pressArrowRight(times = 1) {
@@ -123,14 +138,13 @@
     async function findAndClickCollectionDeComptes() {
         let clicked = false;
         let retries = 0;
-        
+
         while (!clicked && retries < CONFIG.MAX_RETRIES) {
             console.log(`Attempt ${retries + 1} to find 'Collection de comptes' element`);
-            
-            // Try multiple selectors to find the elements
+
             const links = document.querySelectorAll('a, button, .swt-check-button, [class*="button"], [role="button"]');
             console.log(`Found ${links.length} potential elements`);
-            
+
             for (const link of Array.from(links)) {
                 const textElement = link.querySelector('.swt-check-button-text');
                 if (textElement && textElement.textContent.trim() === 'Collection de comptes :') {
@@ -145,9 +159,8 @@
                     }
                 }
             }
-            
+
             if (!clicked) {
-                // Alternative: try to find by text content directly
                 const elements = document.querySelectorAll('*');
                 for (const element of Array.from(elements)) {
                     if (element.textContent && element.textContent.trim() === 'Collection de comptes :') {
@@ -163,18 +176,18 @@
                     }
                 }
             }
-            
+
             if (!clicked) {
                 retries++;
                 await sleep(CONFIG.SLEEP_VERY_LONG_MS * 2);
             }
         }
-        
+
         if (!clicked) {
             console.error('❌ Failed to find and click "Collection de comptes" element after maximum retries');
             return false;
         }
-        
+
         return true;
     }
 
@@ -284,33 +297,33 @@
             // Step 1: Press CTRL+0
             console.log('Step 1: Pressing CTRL+0');
             await pressCtrl0();
-            
+
             // Step 2: Find and click "Collection de comptes :"
             console.log('Step 2: Finding and clicking "Collection de comptes :"');
             const clicked = await findAndClickCollectionDeComptes();
-            
+
             if (!clicked) {
                 console.error('Failed to click Collection de comptes, stopping sequence');
                 removeLoadingOverlay();
                 return;
             }
-            
+
             // Step 3: Press Tab 6 times
             console.log('Step 3: Pressing Tab 6 times');
             await pressTab(6);
-            
+
             // Step 4: Press ArrowRight
             console.log('Step 4: Pressing ArrowRight');
             await pressArrowRight();
-            
+
             // Step 5: Paste the codes
             console.log('Step 5: Pasting codes: 442100,342100,511500,511100');
             await pasteText(CODES.FIRST);
-            
+
             // Step 6: Press Enter
             console.log('Step 6: Pressing Enter');
             await pressEnter();
-          
+
             await pressTab(9);
             await pressEnter();
             await pressEnter(3);
@@ -318,10 +331,8 @@
             await pressEnter();
             await sleep(2000);
             await pressTab(4);
-            await pressEnter();          
-          
-          
-          
+            await pressEnter();
+
             console.log('✅ Complete sequence finished successfully');
         } catch (error) {
             console.error('❌ Key sequence failed:', error);
@@ -332,13 +343,11 @@
 
     function closeEditionTabs(callback) {
         console.warn('closeEditionTabs: TODO - Implement logic to close edition tabs');
-        // Placeholder: Add actual logic to close tabs
         if (callback) callback();
     }
 
     function isActiveTabSaisie() {
         console.warn('isActiveTabSaisie: TODO - Implement logic to check if Saisie tab is active');
-        // Placeholder: Add actual logic to check tab
         return true;
     }
 
